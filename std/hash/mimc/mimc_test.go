@@ -90,3 +90,43 @@ func TestMimcAll(t *testing.T) {
 	}
 
 }
+
+type mimc0Circuit struct {
+	Out frontend.Variable
+}
+
+func (c *mimc0Circuit) Define(api frontend.API) error {
+	hsh, err := NewMiMC(api)
+	if err != nil {
+		return err
+	}
+	hsh.Reset()
+	hsh.Write(0)
+	out := hsh.Sum()
+	api.AssertIsEqual(out, c.Out)
+
+	return nil
+}
+
+func TestMiMC0(t *testing.T) {
+	curves := map[ecc.ID]hash.Hash{
+		ecc.BN254:     hash.MIMC_BN254,
+		ecc.BLS12_381: hash.MIMC_BLS12_381,
+		ecc.BLS12_377: hash.MIMC_BLS12_377,
+		ecc.BW6_761:   hash.MIMC_BW6_761,
+		ecc.BW6_633:   hash.MIMC_BW6_633,
+		ecc.BLS24_315: hash.MIMC_BLS24_315,
+		ecc.BLS24_317: hash.MIMC_BLS24_317,
+	}
+
+	for curve, hashConfig := range curves {
+		zero := make([]byte, len(curve.ScalarField().Bytes()))
+
+		hsh := hashConfig.New()
+		hsh.Reset()
+		hsh.Write(zero)
+		out := hsh.Sum(nil)
+
+		test.NewAssert(t).SolvingSucceeded(&mimc0Circuit{}, &mimc0Circuit{out}, test.WithCurves(curve))
+	}
+}
